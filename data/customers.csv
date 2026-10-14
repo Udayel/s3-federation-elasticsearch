@@ -1,0 +1,21 @@
+customer_id,customer_name,email,phone,segment,customer_lifetime_value,created_date,country
+CUST001,Acme Corporation,contact@acme.com,555-0101,Premium,250000,2023-01-15,USA
+CUST002,TechStart Inc,info@techstart.com,555-0102,Enterprise,500000,2023-02-20,USA
+CUST003,Global Solutions LLC,sales@globalsol.com,555-0103,Mid-Market,125000,2023-03-10,USA
+CUST004,Innovation Labs,hello@innolabs.com,555-0104,Startup,45000,2023-04-05,USA
+CUST005,Future Ventures,contact@futurvent.com,555-0105,Premium,320000,2023-05-12,USA
+CUST006,Digital Dynamics,support@digitaldyn.com,555-0106,Enterprise,580000,2023-06-18,USA
+CUST007,Smart Systems,info@smartsys.com,555-0107,Mid-Market,98000,2023-07-22,USA
+CUST008,NextGen Corp,sales@nextgen.com,555-0108,Startup,32000,2023-08-14,USA
+CUST009,CloudFirst Ltd,contact@cloudfirst.com,555-0109,Premium,410000,2023-09-25,USA
+CUST010,DataDrive Solutions,hello@datadrive.com,555-0110,Enterprise,620000,2023-10-30,USA
+CUST011,Quantum Analytics,info@quantum.com,555-0111,Mid-Market,155000,2023-11-08,USA
+CUST012,Swift Logistics,support@swiftlog.com,555-0112,Startup,28000,2023-12-20,USA
+CUST013,Apex Industries,contact@apexind.com,555-0113,Premium,275000,2024-01-10,USA
+CUST014,Nexus Enterprises,sales@nexusent.com,555-0114,Enterprise,695000,2024-02-15,USA
+CUST015,Vertex Group,hello@vertexg.com,555-0115,Mid-Market,112000,2024-03-22,USA
+CUST016,Bright Ideas Co,info@brightideas.com,555-0116,Startup,55000,2024-04-30,USA
+CUST017,Summit Tech,contact@summittech.com,555-0117,Premium,380000,2024-05-12,USA
+CUST018,Pioneer Solutions,support@pioneer.com,555-0118,Enterprise,540000,2024-06-25,USA
+CUST019,Compass Corp,sales@compass.com,555-0119,Mid-Market,88000,2024-07-18,USA
+CUST020,Bridge Networks,hello@bridgenet.com,555-0120,Startup,42000,2024-08-30,USA

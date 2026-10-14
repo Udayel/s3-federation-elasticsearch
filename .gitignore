@@ -1,0 +1,50 @@
+# Temporary files
+*.tmp
+*.log
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# AWS credentials (NEVER commit these!)
+.aws/
+*.pem
+*.key
+*.pub
+
+# Environment files
+.env
+.env.local
+.env*.local
+
+# IDE
+.vscode/
+.idea/
+*.iml
+
+# Node (if using Node scripts)
+node_modules/
+package-lock.json
+yarn.lock
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.venv/
+venv/
+
+# Parquet files (local processing)
+*.parquet
+
+# Temporary scripts
+/tmp/
+/temp/
+
+# Backup files
+*.backup
+*.bak
