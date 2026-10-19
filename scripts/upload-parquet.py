@@ -9,11 +9,11 @@ Uploads every *.parquet in the data folder to:
     s3://<bucket>/<prefix>/<file>.parquet
 
 Usage:
-    python3 upload-parquet.py <BUCKET> [--region us-west-2] [--prefix business-data-parquet] [--data-dir data/parquet]
+    python3 upload-parquet.py <BUCKET> [--region us-west-2] [--prefix business-data] [--data-dir data/parquet]
 
 Examples:
     python3 scripts/upload-parquet.py elastic-s3-fed-010526247135-usw2
-    python3 scripts/upload-parquet.py my-bucket --region us-east-1 --prefix business-data-parquet
+    python3 scripts/upload-parquet.py my-bucket --region us-east-1 --prefix business-data
 """
 import argparse
 import hashlib
@@ -56,10 +56,11 @@ def main():
     ap = argparse.ArgumentParser(description="Upload Parquet sample data to S3.")
     ap.add_argument("bucket", help="Target S3 bucket name")
     ap.add_argument("--region", default="us-west-2", help="AWS region (default: us-west-2)")
-    ap.add_argument("--prefix", default="business-data-parquet",
-                    help="S3 key prefix (default: business-data-parquet)")
+    ap.add_argument("--prefix", default="business-data",
+                    help="S3 key prefix (default: business-data; must match the IAM policy prefix)")
     ap.add_argument("--data-dir", default=str(Path(__file__).resolve().parent.parent / "data" / "parquet"),
-                    help="Folder containing *.parquet (default: ../data/parquet relative to this script)")
+                    help="Folder containing *.parquet (default: the repo's data/parquet folder, "
+                         "resolved relative to this script)")
     args = ap.parse_args()
 
     data_dir = Path(args.data_dir)
