@@ -1,292 +1,170 @@
 # S3 Federation for Elasticsearch Cloud
 
-Complete setup repository for S3 Federation with Elasticsearch Cloud, including sample data, IAM templates, and automation scripts.
+Complete setup repository for **ES|QL Data Federation** with Elasticsearch Cloud — query Parquet data in Amazon S3 **in place**, with no ingestion, using the same ES|QL syntax you use for indexed data.
+
+> Companion to the blog *"Querying Amazon S3 in Place: ES|QL Data Federation Brings Zero-ETL to Elastic."*
 
 ## 📋 Contents
 
 ```
 ├── data/
-│   ├── customers.csv      - Sample customer data (20 records)
-│   ├── sales.csv          - Sample sales transactions (25 records)
-│   ├── inventory.csv      - Sample inventory (15 products)
-│   └── crm.csv           - Sample CRM contacts (10 records)
+│   └── parquet/
+│       ├── customers.parquet   - 100 customers (segment, CLV, signup_date, …)
+│       ├── sales.parquet       - 250 orders, Jul–Oct 2026 (total_amount, status, payment_method, …)
+│       ├── inventory.parquet   - 50 products (quantity_on_hand, reorder_level, warehouse_location, …)
+│       └── crm.parquet         - 100 CRM records (opportunity_stage, estimated_value, lead_status, …)
 ├── iam/
-│   ├── s3-federation-policy-template.json  - Parameterized IAM policy
-│   ├── trust-policy-template.json          - Parameterized trust policy
-│   └── setup-iam.sh                        - IAM setup automation
+│   ├── s3-federation-policy-template.json
+│   ├── trust-policy-template.json
+│   └── setup-iam.sh
 ├── scripts/
-│   ├── create-s3-bucket.sh  - Create and configure S3 bucket
-│   └── upload-data.sh       - Upload data files to S3
+│   ├── create-s3-bucket.sh
+│   └── upload-parquet.py       - Upload the Parquet data to S3 (boto3 or aws CLI)
 └── README.md
 ```
 
-## 🚀 Quick Start (5 minutes)
+> **Note on data format.** This repo ships **Parquet** sample data. ES|QL Data Federation also supports CSV, TSV, and NDJSON, but Parquet is recommended: column selection and row-group statistics push down into the reader, so queries read far fewer bytes from S3.
 
-### Step 1: Create S3 Bucket
+## ✅ Prerequisites
 
+ES|QL Data Federation is an **experimental** feature. Before you start:
+
+- An Elastic deployment on **version 9.5 or later** (Elastic Cloud Hosted, ECE, ECK, or self-managed).
+- An **Enterprise** subscription.
+- The feature enabled on the deployment:
+  - Elasticsearch (`elasticsearch.yml`): `esql.federation.enabled: true`
+  - Kibana (`kibana.yml`): `xpack.dataFederation.enabled: true`
+  - On Elastic Cloud, add these under the deployment's **user settings** and apply (triggers a rolling restart).
+- Not supported on Windows.
+- AWS CLI configured with permission to create S3 buckets and IAM resources.
+
+## 🚀 Quick Start
+
+### Step 1 — Create the S3 bucket
 ```bash
-bash scripts/create-s3-bucket.sh my-s3-federation-bucket us-east-1
+bash scripts/create-s3-bucket.sh my-s3-federation-bucket us-west-2
 ```
+Creates the bucket with versioning, AES256 encryption, public access blocked, and a `business-data/` prefix.
 
-**What it does:**
-- Creates S3 bucket
-- Enables versioning
-- Enables encryption (AES256)
-- Blocks public access
-- Creates `business-data/` prefix
-
-### Step 2: Upload Data Files
-
+### Step 2 — Upload the Parquet data
 ```bash
-bash scripts/upload-data.sh my-s3-federation-bucket us-east-1
+python3 scripts/upload-parquet.py my-s3-federation-bucket --region us-west-2
 ```
+Uploads every `data/parquet/*.parquet` to `s3://my-s3-federation-bucket/business-data/`. Uses `boto3` if available, otherwise falls back to the `aws` CLI. Prints each file's size and md5.
 
-**Files uploaded:**
-- customers.csv (20 records)
-- sales.csv (25 transactions)
-- inventory.csv (15 products)
-- crm.csv (10 contacts)
-
-### Step 3: Setup IAM
-
+Verify:
 ```bash
-bash iam/setup-iam.sh my-s3-federation-bucket business-data elasticsearch-user
+aws s3 ls s3://my-s3-federation-bucket/business-data/ --region us-west-2
 ```
 
-**Creates:**
-- IAM Policy: `elastic-s3-federation-policy`
-- IAM Role: `elastic-s3-federation-role`
-- IAM User: `elasticsearch-user`
-
-### Step 4: Generate Access Keys
-
+### Step 3 — Set up IAM (least privilege)
 ```bash
-aws iam create-access-key --user-name elasticsearch-user
+bash iam/setup-iam.sh my-s3-federation-bucket business-data elasticsearch-s3-federation
 ```
+Creates a policy granting **only** `s3:ListBucket` (bucket) and `s3:GetObject` (objects under `business-data/`), and an IAM user to attach it to.
 
-**Save the output:**
-- Access Key ID
-- Secret Access Key
+> ⚠️ **Prefix scoping matters.** The policy grants `GetObject` on `arn:aws:s3:::<bucket>/business-data/*`. If you place the data under a *different* prefix (e.g. `business-data-parquet/`), you must widen the policy Resource accordingly — `business-data/*` does **not** match `business-data-parquet/...`. Keeping the data in `business-data/` needs no change.
 
-### Step 5: Configure Elasticsearch
-
-1. Go to Kibana → Stack Management → Data Sources
-2. Add S3 Data Source
-3. Enter:
-   - Bucket: `my-s3-federation-bucket`
-   - Prefix: `business-data`
-   - Region: `us-east-1`
-   - Format: CSV (or convert to Parquet)
-   - Access Keys: (from Step 4)
-4. Test Connection
-5. Save
-
-## 📊 Sample Data
-
-### Customers (20 records)
-- Customer ID, Name, Email, Phone
-- Segments: Startup, Mid-Market, Enterprise, Premium
-- Lifetime Value: $28K - $695K
-
-### Sales (25 transactions)
-- Order ID, Customer ID, Product ID
-- Quantity, Unit Price, Total Amount
-- Order Date, Status, Region
-
-### Inventory (15 products)
-- Product ID, Name, SKU, Category
-- Quantity on Hand, Reorder Level
-- Unit Price, Supplier ID
-- Status: Active, Low, Critical, OutOfStock
-
-### CRM (10 contacts)
-- Contact ID, Customer ID, Contact Name
-- Email, Phone, Department, Job Title
-- Last Contact Date, Interaction Type, Notes
-
-## 🔐 IAM Configuration
-
-### Policy Permissions
-
-The `elastic-s3-federation-policy` grants:
-
-**S3 Read Access:**
-- `s3:ListBucket` - List objects
-- `s3:GetObject` - Read objects
-- `s3:GetBucketLocation` - Get region
-- `s3:ListBucketVersions` - List versions
-- `s3:GetObjectVersion` - Read specific versions
-
-**CloudWatch Logging:**
-- `logs:CreateLogGroup`
-- `logs:CreateLogStream`
-- `logs:PutLogEvents`
-
-### Parameterized Templates
-
-The templates use placeholders (no hardcoded values):
-
-```json
-"Resource": "arn:aws:s3:::${S3_BUCKET_NAME}/${S3_PREFIX}/*"
-"AWS": "arn:aws:iam::${AWS_ACCOUNT_ID}:root"
-```
-
-The setup scripts automatically replace these with actual values.
-
-## 🛠️ Configuration
-
-All scripts accept parameters - customize for your environment:
-
+### Step 4 — Generate an access key
 ```bash
-# Create bucket in specific region
-bash scripts/create-s3-bucket.sh my-bucket eu-west-1
+aws iam create-access-key --user-name elasticsearch-s3-federation
+```
+Save the `AccessKeyId` and `SecretAccessKey` (shown once).
 
-# Use custom IAM names and prefix
-bash iam/setup-iam.sh my-bucket data-exports my-custom-user
+### Step 5 — Register the data source and datasets in Elastic
+Data Federation uses two objects: a **data source** (connection + auth) and one or more **datasets** (which files). In **Kibana → Dev Tools → Console**, or via the REST API:
+
+```
+PUT /_query/data_source/s3_federation
+{
+  "type": "s3",
+  "settings": {
+    "auth": "static_credentials",
+    "access_key": "<AWS_ACCESS_KEY_ID>",
+    "secret_key": "<AWS_SECRET_ACCESS_KEY>",
+    "region": "us-west-2"
+  }
+}
+```
+```
+PUT /_query/dataset/customers
+{ "data_source": "s3_federation", "resource": "s3://my-s3-federation-bucket/business-data/customers.parquet" }
+
+PUT /_query/dataset/sales
+{ "data_source": "s3_federation", "resource": "s3://my-s3-federation-bucket/business-data/sales.parquet" }
+
+PUT /_query/dataset/inventory
+{ "data_source": "s3_federation", "resource": "s3://my-s3-federation-bucket/business-data/inventory.parquet" }
+
+PUT /_query/dataset/crm
+{ "data_source": "s3_federation", "resource": "s3://my-s3-federation-bucket/business-data/crm.parquet" }
 ```
 
-## ✅ Verification
+You can also do this in Kibana under **Data management → ES|QL Data Federation → Connect data source → Add dataset**.
 
-### Verify S3 Setup
-```bash
-aws s3 ls s3://my-s3-federation-bucket/business-data/
+> **Security tip.** For production, prefer **federated identity** (OIDC / `sts:AssumeRoleWithWebIdentity`) over long-lived access keys, so no static AWS credentials are stored in Elastic.
+
+### Step 6 — Query the data with ES|QL
+There is no special syntax — query a dataset with `FROM`, exactly like an index:
+
+```esql
+FROM customers
+| LIMIT 10
 ```
 
-Expected output:
-```
-2024-10-14 customers.csv
-2024-10-14 sales.csv
-2024-10-14 inventory.csv
-2024-10-14 crm.csv
-```
+## 📊 Hands-On Query Patterns
 
-### Verify IAM
-```bash
-aws iam get-policy --policy-arn arn:aws:iam::ACCOUNT_ID:policy/elastic-s3-federation-policy
-aws iam get-role --role-name elastic-s3-federation-role
-aws iam get-user --user-name elasticsearch-user
+**1. Customer segmentation by lifetime value**
+```esql
+FROM customers
+| STATS customers = COUNT(*), total_clv = SUM(customer_lifetime_value) BY segment
+| SORT total_clv DESC
 ```
 
-### Test Access
-```bash
-# Using the user's credentials
-export AWS_ACCESS_KEY_ID=your_key_id
-export AWS_SECRET_ACCESS_KEY=your_secret_key
+**2. CRM pipeline by opportunity stage**
+```esql
+FROM crm
+| STATS deals = COUNT(*), total_value = ROUND(SUM(estimated_value), 2) BY opportunity_stage
+| SORT total_value DESC
+```
+Returns, e.g., **Won = $4.48M across 14 deals**, **Lead = $4.39M across 20 opportunities**.
 
-aws s3 ls s3://my-s3-federation-bucket/business-data/
+**3. Inventory reorder alerts**
+```esql
+FROM inventory
+| WHERE quantity_on_hand < reorder_level
+| KEEP product_name, quantity_on_hand, reorder_level, warehouse_location
+| SORT quantity_on_hand ASC
 ```
 
-## 📝 Elasticsearch Configuration
-
-### Data Source Settings
+**4. Monthly revenue trend**
+```esql
+FROM sales
+| EVAL ym = DATE_FORMAT("yyyy-MM", order_date)
+| STATS orders = COUNT(*), revenue = ROUND(SUM(total_amount), 2) BY ym
+| SORT ym
 ```
-Type: S3
-Bucket: my-s3-federation-bucket
-Region: us-east-1
-Prefix: business-data/
-Format: CSV or Parquet
-Access Key ID: [from Step 4]
-Secret Access Key: [from Step 4]
-```
+Returns the monthly series peaking at **Sept 2026 = $2.19M across 94 orders** (October is a partial month).
 
-### Sample Query (ES|SQL)
-```sql
-SELECT customer_id, customer_name, total_spent
-FROM s3(bucket='my-s3-federation-bucket', path='business-data/customers.csv')
-LIMIT 10
-```
+## 🔄 Progressive Acceleration
 
-## 🔄 Data Format Conversion
+| Capability | S3 Federated Datasets | Elasticsearch Indices |
+|---|---|---|
+| Storage cost | Low (S3 object storage) | Standard index storage |
+| Ingestion pipeline | None (Zero-ETL) | Required |
+| ES\|QL `FROM` queries | ✅ | ✅ |
+| kNN vector search | ❌ | ✅ |
+| LOOKUP JOIN target | ❌ | ✅ |
+| Time series (TS) functions | ❌ | ✅ |
+| Relevance scoring | Runtime (boolean similarity) | Full BM25 / hybrid |
 
-The sample data is in CSV format. For production Elasticsearch ES|SQL Federation:
-
-### Option 1: AWS Glue
-```bash
-# Create Glue crawler to convert CSV to Parquet
-```
-
-### Option 2: Local Python
-```python
-import pandas as pd
-
-for file in ['customers', 'sales', 'inventory', 'crm']:
-    df = pd.read_csv(f'{file}.csv')
-    df.to_parquet(f'{file}.parquet')
-```
-
-### Option 3: AWS Lambda
-Use AWS Lambda with PyArrow to convert on upload
-
-## 📚 Documentation
-
-For detailed setup and troubleshooting, see:
-- `/Users/uday/s3-federation-poc/IMPLEMENTATION-SEQUENCE.md`
-- `/Users/uday/s3-federation-poc/IAM-SECURITY-MATRIX.md`
-
-## 🔒 Security Best Practices
-
-✅ **Implemented:**
-- Least privilege IAM policy
-- S3 encryption enabled
-- Public access blocked
-- Versioning enabled
-- User-based access control
-
-✅ **Recommended:**
-- Rotate access keys every 90 days
-- Enable CloudTrail logging
-- Use AWS Secrets Manager for credentials
-- Restrict bucket policy to specific IPs
-- Enable S3 access logging
-
-## 📋 Checklist
-
-- [ ] Clone/fork this repository
-- [ ] Create S3 bucket: `bash scripts/create-s3-bucket.sh`
-- [ ] Upload data: `bash scripts/upload-data.sh`
-- [ ] Setup IAM: `bash iam/setup-iam.sh`
-- [ ] Generate access keys: `aws iam create-access-key`
-- [ ] Configure Elasticsearch
-- [ ] Test query in Kibana
+Keep raw data cheap in S3; promote high-value subsets into indices when you need advanced search.
 
 ## 🆘 Troubleshooting
 
-### "Access Denied" Error
-- Verify IAM policy is attached to user
-- Check S3 bucket name matches policy
-- Verify access keys are correct
-
-### "NoSuchBucket" Error
-- Verify bucket name is correct
-- Verify bucket is in correct region
-- Check bucket exists: `aws s3 ls`
-
-### Data Not Visible
-- Verify files are uploaded: `aws s3 ls s3://bucket/prefix/`
-- Verify file format (CSV vs Parquet)
-- Check Elasticsearch prefix matches S3 path
-
-## 📞 Support
-
-For issues or questions:
-1. Check troubleshooting section above
-2. Review IAM policy permissions
-3. Verify S3 bucket configuration
-4. Check Elasticsearch data source settings
+- **403 / Access Denied on query** — the IAM policy prefix doesn't cover your object path. Confirm the data is under `business-data/` (or widen the policy). Verify with `aws s3 ls`.
+- **Feature/endpoint not found** — confirm `esql.federation.enabled` (ES) and `xpack.dataFederation.enabled` (Kibana) are set, the deployment is 9.5+, and the subscription is Enterprise.
+- **No rows / wrong schema** — query `FROM <dataset> | LIMIT 1` to inspect inferred types.
 
 ## 📄 License
-
-Open source - feel free to fork and customize for your environment
-
-## 🎯 Next Steps
-
-After basic setup:
-1. Convert CSV to Parquet for better Elasticsearch performance
-2. Add more sample data for testing
-3. Setup Elasticsearch dashboards
-4. Configure automated workflows
-5. Deploy AI agents for monitoring
-
----
-
-**Ready to get started?** Run the quick start commands above! 🚀
+Open source — fork and customize for your environment.
