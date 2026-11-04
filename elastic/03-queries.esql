@@ -1,0 +1,35 @@
+// Run in Kibana Discover (ES|QL mode) or Dev Tools: POST /_query { "query": "..." }
+
+// 1. Verify the dataset and inspect the inferred schema
+FROM sales
+| LIMIT 10
+
+// 2. Monthly revenue trend (Sept 2026 peaks at $2.19M across 94 orders; Oct is partial)
+FROM sales
+| EVAL ym = DATE_FORMAT("yyyy-MM", order_date)
+| STATS orders = COUNT(*), revenue = ROUND(SUM(total_amount), 2) BY ym
+| SORT ym
+
+// 3. Revenue by payment method for completed orders (WHERE + KEEP cut the bytes read from S3)
+FROM sales
+| WHERE status == "Completed"
+| STATS orders = COUNT(*), revenue = ROUND(SUM(total_amount), 2) BY payment_method
+| SORT revenue DESC
+
+// ---- More patterns on the other datasets ----
+
+// Customer segmentation by lifetime value
+FROM customers
+| STATS customers = COUNT(*), total_clv = SUM(customer_lifetime_value) BY segment
+| SORT total_clv DESC
+
+// CRM pipeline by stage (Won = $4.48M across 14 deals; Lead = $4.39M across 20)
+FROM crm
+| STATS deals = COUNT(*), total_value = ROUND(SUM(estimated_value), 2) BY opportunity_stage
+| SORT total_value DESC
+
+// Inventory below reorder level
+FROM inventory
+| WHERE quantity_on_hand < reorder_level
+| KEEP product_name, quantity_on_hand, reorder_level, warehouse_location
+| SORT quantity_on_hand ASC

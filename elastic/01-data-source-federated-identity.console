@@ -1,0 +1,17 @@
+# Kibana > Dev Tools > Console
+# Recommended on Elastic Cloud Hosted: no static AWS credentials are stored.
+# Get the role ARN from iam/setup-federated-identity.sh (or the CloudFormation stack output).
+
+PUT /_query/data_source/s3_federation
+{
+  "type": "s3",
+  "description": "Sample business data for the ES|QL Data Federation blog",
+  "settings": {
+    "auth": "federated_identity",
+    "role_arn": "arn:aws:iam::<ACCOUNT_ID>:role/elastic-esql-federation-role",
+    "jwt_audience": "sts.amazonaws.com"
+  }
+}
+
+# 9.5 only: also add  "region": "<BUCKET_REGION>"  to settings (it's also used as the STS region).
+# 9.6+: "region" on a data source is deprecated and ignored; the bucket region is auto-detected.

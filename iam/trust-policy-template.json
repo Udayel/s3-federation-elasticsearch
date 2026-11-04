@@ -2,18 +2,18 @@
   "Version": "2012-10-17",
   "Statement": [
     {
+      "Sid": "AllowElasticDeploymentViaOIDC",
       "Effect": "Allow",
       "Principal": {
-        "AWS": "arn:aws:iam::${AWS_ACCOUNT_ID}:root"
+        "Federated": "${OIDC_PROVIDER_ARN}"
       },
-      "Action": "sts:AssumeRole"
-    },
-    {
-      "Effect": "Allow",
-      "Principal": {
-        "Service": "ec2.amazonaws.com"
-      },
-      "Action": "sts:AssumeRole"
+      "Action": "sts:AssumeRoleWithWebIdentity",
+      "Condition": {
+        "StringEquals": {
+          "${ISSUER_HOST_PATH}:aud": "${JWT_AUDIENCE}",
+          "${ISSUER_HOST_PATH}:sub": "${JWT_SUBJECT}"
+        }
+      }
     }
   ]
 }

@@ -1,0 +1,33 @@
+# Kibana > Dev Tools > Console
+# One dataset per file. Each resource sits under business-data/, which is the
+# prefix the IAM policy grants. The .parquet extension lets Elasticsearch infer
+# the format; set "settings": { "format": "parquet" } for extensionless or
+# mixed-format paths.
+
+PUT /_query/dataset/sales
+{
+  "data_source": "s3_federation",
+  "resource": "s3://<BUCKET>/business-data/sales.parquet",
+  "description": "250 orders, Jul-Oct 2026"
+}
+
+PUT /_query/dataset/customers
+{
+  "data_source": "s3_federation",
+  "resource": "s3://<BUCKET>/business-data/customers.parquet",
+  "description": "100 customers"
+}
+
+PUT /_query/dataset/inventory
+{
+  "data_source": "s3_federation",
+  "resource": "s3://<BUCKET>/business-data/inventory.parquet",
+  "description": "50 products"
+}
+
+PUT /_query/dataset/crm
+{
+  "data_source": "s3_federation",
+  "resource": "s3://<BUCKET>/business-data/crm.parquet",
+  "description": "100 CRM opportunities"
+}
