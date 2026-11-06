@@ -1,0 +1,6 @@
+# Kibana > Dev Tools > Console
+DELETE /_query/dataset/sales
+DELETE /_query/dataset/customers
+DELETE /_query/dataset/inventory
+DELETE /_query/dataset/crm
+DELETE /_query/data_source/s3_federation

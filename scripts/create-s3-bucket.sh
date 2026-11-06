@@ -39,16 +39,16 @@ main() {
   if [ $# -lt 1 ]; then
     print_error "Missing bucket name"
     echo ""
-    echo "Usage: bash create-s3-bucket.sh <BUCKET_NAME> [AWS_REGION]"
+    echo "Usage: bash scripts/create-s3-bucket.sh <BUCKET_NAME> [AWS_REGION]"
     echo ""
     echo "Example:"
-    echo "  bash create-s3-bucket.sh my-s3-federation-bucket us-east-1"
+    echo "  bash scripts/create-s3-bucket.sh my-s3-federation-bucket us-west-2"
     echo ""
     exit 1
   fi
 
   BUCKET_NAME=$1
-  AWS_REGION=${2:-us-east-1}
+  AWS_REGION=${2:-us-west-2}
 
   print_header "Creating S3 Bucket for S3 Federation"
 
@@ -59,7 +59,7 @@ main() {
   echo ""
 
   # Check if bucket exists
-  if aws s3 ls "s3://$BUCKET_NAME" 2>/dev/null; then
+  if aws s3api head-bucket --bucket "$BUCKET_NAME" 2>/dev/null; then
     print_step "Bucket already exists"
   else
     print_step "Creating bucket..."
@@ -101,25 +101,15 @@ main() {
     "BlockPublicAcls=true,IgnorePublicAcls=true,BlockPublicPolicy=true,RestrictPublicBuckets=true"
   print_step "Public access blocked"
 
-  # Create business-data prefix
-  print_step "Creating business-data prefix..."
-  echo "" | aws s3 cp - "s3://$BUCKET_NAME/business-data/.placeholder"
-  print_step "Prefix created"
-
   echo ""
   print_header "Next Steps"
   echo ""
-  echo "1. Upload data files:"
-  echo "   aws s3 cp data/customers.csv s3://$BUCKET_NAME/business-data/"
-  echo "   aws s3 cp data/sales.csv s3://$BUCKET_NAME/business-data/"
-  echo "   aws s3 cp data/inventory.csv s3://$BUCKET_NAME/business-data/"
-  echo "   aws s3 cp data/crm.csv s3://$BUCKET_NAME/business-data/"
+  echo "1. Upload the Parquet sample data:"
+  echo "   python3 scripts/upload-parquet.py $BUCKET_NAME --region $AWS_REGION"
   echo ""
-  echo "2. Setup IAM:"
-  echo "   bash iam/setup-iam.sh $BUCKET_NAME business-data"
-  echo ""
-  echo "3. Verify files:"
-  echo "   aws s3 ls s3://$BUCKET_NAME/business-data/"
+  echo "2. Set up IAM (pick one):"
+  echo "   bash iam/setup-federated-identity.sh $BUCKET_NAME <JWT_ISSUER_URL> <JWT_SUBJECT>   # Elastic Cloud Hosted"
+  echo "   bash iam/setup-static-credentials.sh $BUCKET_NAME business-data                    # self-managed / ECE / ECK"
   echo ""
 }
 

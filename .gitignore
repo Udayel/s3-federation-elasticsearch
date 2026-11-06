@@ -38,9 +38,6 @@ __pycache__/
 .venv/
 venv/
 
-# Parquet files (local processing)
-*.parquet
-
 # Temporary scripts
 /tmp/
 /temp/

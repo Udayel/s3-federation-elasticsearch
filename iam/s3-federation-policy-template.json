@@ -2,33 +2,16 @@
   "Version": "2012-10-17",
   "Statement": [
     {
-      "Sid": "S3BucketListAccess",
+      "Sid": "ReadDatasetObjects",
       "Effect": "Allow",
-      "Action": [
-        "s3:ListBucket",
-        "s3:GetBucketLocation",
-        "s3:ListBucketVersions"
-      ],
-      "Resource": "arn:aws:s3:::${S3_BUCKET_NAME}"
+      "Action": ["s3:GetObject"],
+      "Resource": ["arn:aws:s3:::${S3_BUCKET_NAME}/${S3_PREFIX}/*"]
     },
     {
-      "Sid": "S3ObjectReadAccess",
+      "Sid": "ListBucketForGlobDatasets",
       "Effect": "Allow",
-      "Action": [
-        "s3:GetObject",
-        "s3:GetObjectVersion"
-      ],
-      "Resource": "arn:aws:s3:::${S3_BUCKET_NAME}/${S3_PREFIX}/*"
-    },
-    {
-      "Sid": "CloudWatchLogs",
-      "Effect": "Allow",
-      "Action": [
-        "logs:CreateLogGroup",
-        "logs:CreateLogStream",
-        "logs:PutLogEvents"
-      ],
-      "Resource": "arn:aws:logs:*:*:*"
+      "Action": ["s3:ListBucket"],
+      "Resource": ["arn:aws:s3:::${S3_BUCKET_NAME}"]
     }
   ]
 }

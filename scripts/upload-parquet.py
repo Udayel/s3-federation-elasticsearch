@@ -9,10 +9,10 @@ Uploads every *.parquet in the data folder to:
     s3://<bucket>/<prefix>/<file>.parquet
 
 Usage:
-    python3 upload-parquet.py <BUCKET> [--region us-west-2] [--prefix business-data] [--data-dir data/parquet]
+    python3 scripts/upload-parquet.py <BUCKET> [--region us-west-2] [--prefix business-data] [--data-dir data/parquet]
 
 Examples:
-    python3 scripts/upload-parquet.py elastic-s3-fed-010526247135-usw2
+    python3 scripts/upload-parquet.py my-s3-federation-bucket
     python3 scripts/upload-parquet.py my-bucket --region us-east-1 --prefix business-data
 """
 import argparse
